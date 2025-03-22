@@ -1,6 +1,7 @@
 import csv
 import datetime
 import time
+import logging
 
 
 """ Bets storage location. """
@@ -49,3 +50,24 @@ def load_bets() -> list[Bet]:
         for row in reader:
             yield Bet(row[0], row[1], row[2], row[3], row[4], row[5])
 
+"""
+Decodes a bet from a client socket.
+"""
+def decode_bet(client_sock):
+    msg_lenght = int.from_bytes(client_sock.recv(4), byteorder='big')
+    msg = client_sock.recv(msg_lenght).decode('utf-8').strip()
+    addr = client_sock.getpeername()
+
+    bet_data = msg.split(',')
+    if len(bet_data) != 6:
+        logging.error(f"action: receive_message | result: fail | ip: {addr[0]} | msg: {msg} | error: Invalid bet data")
+        raise ValueError("Invalid bet data")
+    
+    bet = Bet(bet_data[0], bet_data[1], bet_data[2], bet_data[3], bet_data[4], bet_data[5])
+    return bet, addr, msg
+
+"""
+Acknowledges a bet to a client socket.
+"""
+def acknowledge_bet(client_sock, document, number):
+    client_sock.send("{},{}\n".format(document,number).encode('utf-8'))

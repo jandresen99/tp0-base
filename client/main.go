@@ -22,7 +22,7 @@ var log = logging.MustGetLogger("log")
 // config file ./config.yaml. Environment variables takes precedence over parameters
 // defined in the configuration file. If some of the variables cannot be parsed,
 // an error is returned
-func InitConfig() (*viper.Viper, error) {
+func InitConfig() (*viper.Viper, *common.Bet, error) {
 	v := viper.New()
 
 	// Configure viper to read env variables with the CLI_ prefix
@@ -52,10 +52,25 @@ func InitConfig() (*viper.Viper, error) {
 	// Parse time.Duration variables and return an error if those variables cannot be parsed
 
 	if _, err := time.ParseDuration(v.GetString("loop.period")); err != nil {
-		return nil, errors.Wrapf(err, "Could not parse CLI_LOOP_PERIOD env var as time.Duration.")
+		return nil, nil, errors.Wrapf(err, "Could not parse CLI_LOOP_PERIOD env var as time.Duration.")
 	}
 
-	return v, nil
+	bet_name := os.Getenv("NOMBRE")
+	bet_lastname := os.Getenv("APELLIDO")
+	bet_document := os.Getenv("DOCUMENTO")
+	bet_birthdate := os.Getenv("NACIMIENTO")
+	bet_number := os.Getenv("NUMERO")
+
+	bet := &common.Bet{
+		AgencyId:  v.GetString("id"),
+		Name:      bet_name,
+		LastName:  bet_lastname,
+		Document:  bet_document,
+		BirthDate: bet_birthdate,
+		Number:    bet_number,
+	}
+
+	return v, bet, nil
 }
 
 // InitLogger Receives the log level to be set in go-logging as a string. This method
@@ -93,7 +108,7 @@ func PrintConfig(v *viper.Viper) {
 }
 
 func main() {
-	v, err := InitConfig()
+	v, bet, err := InitConfig()
 	if err != nil {
 		log.Criticalf("%s", err)
 	}
@@ -115,6 +130,6 @@ func main() {
 		LoopPeriod:    v.GetDuration("loop.period"),
 	}
 
-	client := common.NewClient(clientConfig)
+	client := common.NewClient(clientConfig, *bet)
 	client.StartClientLoop(sigChan)
 }

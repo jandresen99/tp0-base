@@ -6,7 +6,7 @@ services:
     entrypoint: python3 /main.py
     environment:
     - PYTHONUNBUFFERED=1
-    # - LOGGING_LEVEL=DEBUG
+    - LOGGING_LEVEL=DEBUG
     networks:
     - testing_net
     volumes:
@@ -18,7 +18,88 @@ services:
     entrypoint: /client
     environment:
       - CLI_ID=1
-      # - CLI_LOG_LEVEL=DEBUG
+      - CLI_LOG_LEVEL=DEBUG
+      - NOMBRE=Santiago Lionel
+      - APELLIDO=Lorca
+      - DOCUMENTO=30904465
+      - NACIMIENTO=1999-03-17
+      - NUMERO=7574
+    networks:
+      - testing_net
+    volumes:
+      - ./client/config.yaml:/config.yaml
+    depends_on:
+      - server
+
+  client2:
+    container_name: client2
+    image: client:latest
+    entrypoint: /client
+    environment:
+      - CLI_ID=2
+      - CLI_LOG_LEVEL=DEBUG
+      - NOMBRE=Juan
+      - APELLIDO=Perez
+      - DOCUMENTO=38564789
+      - NACIMIENTO=2000-06-12
+      - NUMERO=4586
+    networks:
+      - testing_net
+    volumes:
+      - ./client/config.yaml:/config.yaml
+    depends_on:
+      - server
+
+  client3:
+    container_name: client3
+    image: client:latest
+    entrypoint: /client
+    environment:
+      - CLI_ID=3
+      - CLI_LOG_LEVEL=DEBUG
+      - NOMBRE=Ana
+      - APELLIDO=Rodriguez
+      - DOCUMENTO=25896314
+      - NACIMIENTO=1998-09-25
+      - NUMERO=1234
+    networks:
+      - testing_net
+    volumes:
+      - ./client/config.yaml:/config.yaml
+    depends_on:
+      - server
+
+  client4:
+    container_name: client4
+    image: client:latest
+    entrypoint: /client
+    environment:
+      - CLI_ID=4
+      - CLI_LOG_LEVEL=DEBUG
+      - NOMBRE=Florencia
+      - APELLIDO=Sanchez
+      - DOCUMENTO=25896314
+      - NACIMIENTO=1997-12-15
+      - NUMERO=8520
+    networks:
+      - testing_net
+    volumes:
+      - ./client/config.yaml:/config.yaml
+    depends_on:
+      - server
+
+  client5:
+    container_name: client5
+    image: client:latest
+    entrypoint: /client
+    environment:
+      - CLI_ID=5
+      - CLI_LOG_LEVEL=DEBUG
+      - NOMBRE=Lucas
+      - APELLIDO=Hernandez
+      - DOCUMENTO=25896314
+      - NACIMIENTO=2000-10-10
+      - NUMERO=9632
     networks:
       - testing_net
     volumes:
