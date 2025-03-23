@@ -135,10 +135,6 @@ loop1:
 				log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", len(results))
 				c.conn.Close()
 				return
-			} else {
-				log.Errorf("action: consulta_ganadores | result: fail | error: %v",
-					err,
-				)
 			}
 		}
 	}
