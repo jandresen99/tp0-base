@@ -11,6 +11,8 @@ class Server:
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
         self.running = False
+        self.bet_clients = 0
+        self.finished_clients = 0
 
     def run(self):
         """
@@ -48,17 +50,35 @@ class Server:
         client socket will also be closed
         """
         try:
-            bet_count = 0
-            while True:
-                bets, _, finish = utils.decode_bets(client_sock, bet_count)
-                if finish:
-                    utils.acknowledge_bets(client_sock, bet_count)
-                    logging.info(f'action: apuesta_recibida | result: success | cantidad: {bet_count}')
-                    break
-                
-                utils.store_bets(bets)
-                bet_count += len(bets)
-                logging.info(f'action: apuesta_almacenada | result: success | cantidad: {bet_count}')
+            message = utils.receive_message(client_sock)
+            if message == "BET":
+                self.bet_clients += 1
+                bet_count = 0
+                logging.info(f"action: apuesta_recibida | result: in_progress | cantidad: {bet_count}")
+                while True:
+                    bets, _, finish = utils.decode_bets(client_sock, bet_count)
+                    if finish:
+                        utils.acknowledge_bets(client_sock, bet_count)
+                        logging.info(f'action: apuesta_recibida | result: success | cantidad: {bet_count}')
+                        self.finished_clients += 1
+                        break
+                                            
+                    utils.store_bets(bets)
+                    bet_count += len(bets)
+                    logging.info(f'action: apuesta_recibida | result: in_progress | cantidad: {bet_count}')
+            if message == "RESULTS":
+                logging.info(f'action: sorteo | result: in_progress | finished_clients: {self.finished_clients} | clients: {self.clients} | address: {client_sock.getpeername()}')
+                agency_id = utils.receive_message(client_sock)
+                if self.finished_clients == self.clients:
+                    if not self.winners:
+                        bets = utils.load_bets()
+                        winners = [bet for bet in bets if utils.has_won(bet)]
+                        self.winners = winners
+                        logging.info(f'action: sorteo | result: success')
+                    
+                    agency_winners = [bet for bet in self.winners if bet.agency == int(agency_id)]
+
+                    utils.send_results(client_sock, agency_winners)
         except OSError as e:
             logging.error("action: receive_message | result: fail | error: {e}")
         finally:

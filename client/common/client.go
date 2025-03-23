@@ -63,7 +63,16 @@ func (c *Client) StartClientLoop(sigChan chan os.Signal) {
 	totalBets := len(c.bets)
 	betCount := 0
 
-loop:
+	err := sendStartBets(c.conn)
+	if err != nil {
+		log.Errorf("action: comenzar_envio | result: fail | error: %v",
+			c.config.ID,
+			err,
+		)
+		return
+	}
+
+loop1:
 	for i := 0; i < totalBets; i += c.config.BatchMaxAmount {
 		end := i + c.config.BatchMaxAmount
 		if end > totalBets {
@@ -81,10 +90,12 @@ loop:
 		select {
 		case <-sigChan:
 			log.Infof("action: shutdown | result: success")
-			break loop
+			break loop1
 		default:
 		}
 	}
+
+	log.Infof("action: apuesta_enviada | result: success | cantidad: %v", betCount)
 
 	sendFinishMessage(c.conn)
 
@@ -104,8 +115,31 @@ loop:
 			msg,
 		)
 		return
-	} else {
-		log.Infof("action: finalizar_envio | result: success")
-		c.conn.Close()
+	}
+
+	log.Infof("action: finalizar_envio | result: success")
+	c.conn.Close()
+
+	log.Infof("action: consulta_ganadores | result: in_progress")
+
+	for {
+		select {
+		case <-sigChan:
+			log.Infof("action: shutdown | result: success")
+			return
+		default:
+			c.createClientSocket()
+
+			results, err := sendAskForResults(c.conn, c.config.ID)
+			if err == nil {
+				log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", len(results))
+				c.conn.Close()
+				return
+			} else {
+				log.Errorf("action: consulta_ganadores | result: fail | error: %v",
+					err,
+				)
+			}
+		}
 	}
 }
