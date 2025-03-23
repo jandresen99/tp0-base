@@ -13,6 +13,7 @@ class Server:
         self.running = False
         self.bet_clients = 0
         self.finished_clients = 0
+        self.winners = []
 
     def run(self):
         """
@@ -67,9 +68,10 @@ class Server:
                     bet_count += len(bets)
                     logging.info(f'action: apuesta_recibida | result: in_progress | cantidad: {bet_count}')
             if message == "RESULTS":
-                logging.info(f'action: sorteo | result: in_progress | finished_clients: {self.finished_clients} | clients: {self.clients} | address: {client_sock.getpeername()}')
                 agency_id = utils.receive_message(client_sock)
-                if self.finished_clients == self.clients:
+                logging.info(f'action: sorteo | result: pending | finished_clients: {self.finished_clients} | bet_clients: {self.bet_clients} | agency_id: {agency_id}')
+                if self.finished_clients == self.bet_clients:
+                    logging.info(f'action: sorteo | result: in_progress | finished_clients: {self.finished_clients} | bet_clients: {self.bet_clients} | agency_id: {agency_id}')
                     if not self.winners:
                         bets = utils.load_bets()
                         winners = [bet for bet in bets if utils.has_won(bet)]
