@@ -158,5 +158,9 @@ func sendAskForResults(conn net.Conn, agencyId string) ([]string, error) {
 		return nil, err
 	}
 
+	if msg == "NOWINNERS" {
+		return []string{}, nil
+	}
+
 	return strings.Split(msg, ","), nil
 }

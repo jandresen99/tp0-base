@@ -94,12 +94,14 @@ def recv_full(client_sock, size):
 def receive_message(client_sock):
     msg_lenght = int.from_bytes(client_sock.recv(2), byteorder='big')
     msg = client_sock.recv(msg_lenght).decode('utf-8').strip()
-    addr = client_sock.getpeername()
-    logging.info(
-        f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
+    #addr = client_sock.getpeername()
+    #logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
 
     return msg
 
 def send_results(client_sock, winners):
+    if len(winners) == 0:
+        client_sock.send("NOWINNERS\n".encode('utf-8'))
+        return
     message = ",".join([f"{winner.document}" for winner in winners])
     client_sock.send("{}\n".format(message).encode('utf-8'))
