@@ -55,7 +55,7 @@ class Server:
             if message == "BET":
                 self.bet_clients += 1
                 bet_count = 0
-                logging.info(f"action: apuesta_recibida | result: in_progress | cantidad: {bet_count}")
+                #logging.info(f"action: apuesta_recibida | result: in_progress | cantidad: {bet_count}")
                 while True:
                     bets, _, finish = utils.decode_bets(client_sock, bet_count)
                     if finish:
@@ -63,10 +63,10 @@ class Server:
                         logging.info(f'action: apuesta_recibida | result: success | cantidad: {bet_count}')
                         self.finished_clients += 1
                         break
-                                            
+
                     utils.store_bets(bets)
                     bet_count += len(bets)
-                    logging.info(f'action: apuesta_recibida | result: in_progress | cantidad: {bet_count}')
+                    #logging.info(f'action: apuesta_recibida | result: in_progress | cantidad: {bet_count}')
             if message == "RESULTS":
                 agency_id = utils.receive_message(client_sock)
                 #logging.info(f'action: sorteo | result: pending | finished_clients: {self.finished_clients} | bet_clients: {self.bet_clients} | agency_id: {agency_id}')
