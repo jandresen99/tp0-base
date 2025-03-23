@@ -58,7 +58,7 @@ func sendBetBatch(conn net.Conn, batch []Bet, betCount int) error {
 		return err
 	}
 
-	log.Infof("action: apuesta_enviada | result: in_progress | cantidad: %v", betCount)
+	//log.Infof("action: apuesta_enviada | result: in_progress | cantidad: %v", betCount)
 
 	return nil
 }
