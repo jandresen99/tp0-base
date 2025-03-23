@@ -5,13 +5,13 @@ from common import utils
 
 
 class Server:
-    def __init__(self, port, listen_backlog):
+    def __init__(self, port, listen_backlog, clients):
         # Initialize server socket
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
         self.running = False
-        self.bet_clients = 0
+        self.clients = clients
         self.finished_clients = 0
         self.winners = []
 
@@ -53,7 +53,6 @@ class Server:
         try:
             message = utils.receive_message(client_sock)
             if message == "BET":
-                self.bet_clients += 1
                 bet_count = 0
                 #logging.info(f"action: apuesta_recibida | result: in_progress | cantidad: {bet_count}")
                 while True:
@@ -69,9 +68,9 @@ class Server:
                     #logging.info(f'action: apuesta_recibida | result: in_progress | cantidad: {bet_count}')
             if message == "RESULTS":
                 agency_id = utils.receive_message(client_sock)
-                #logging.info(f'action: sorteo | result: pending | finished_clients: {self.finished_clients} | bet_clients: {self.bet_clients} | agency_id: {agency_id}')
-                if self.finished_clients == self.bet_clients:
-                    #logging.info(f'action: sorteo | result: in_progress | finished_clients: {self.finished_clients} | bet_clients: {self.bet_clients} | agency_id: {agency_id}')
+                #logging.info(f'action: sorteo | result: pending | finished_clients: {self.finished_clients} | clients: {self.clients} | agency_id: {agency_id}')
+                if self.finished_clients == self.clients:
+                    #logging.info(f'action: sorteo | result: in_progress | finished_clients: {self.finished_clients} | clients: {self.clients} | agency_id: {agency_id}')
                     if not self.winners:
                         bets = utils.load_bets()
                         winners = [bet for bet in bets if utils.has_won(bet)]
