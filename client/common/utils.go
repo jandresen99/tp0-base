@@ -154,7 +154,7 @@ func sendAskForResults(conn net.Conn, agencyId string) ([]string, error) {
 	msg = strings.TrimSpace(msg)
 
 	if err != nil {
-		log.Errorf("action: consulta_ganadores | result: fail | error: %v", err)
+		//log.Errorf("action: consulta_ganadores | result: fail | error: %v", err)
 		return nil, err
 	}
 
