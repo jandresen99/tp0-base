@@ -23,15 +23,11 @@ services:
     entrypoint: /client
     environment:
       - CLI_ID={i}
-      - NOMBRE=Santiago Lionel
-      - APELLIDO=Lorca
-      - DOCUMENTO=30904465
-      - NACIMIENTO=1999-03-17
-      - NUMERO=7574
     networks:
       - testing_net
     volumes:
       - ./client/config.yaml:/config.yaml
+      - ./.data/agency-{i}.csv:/agency.csv
     depends_on:
       - server
 """

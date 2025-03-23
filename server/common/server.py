@@ -48,11 +48,17 @@ class Server:
         client socket will also be closed
         """
         try:
-            bet, addr, msg = utils.decode_bet(client_sock)
-            logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
-            utils.store_bets([bet])
-            logging.info(f'action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}')
-            utils.acknowledge_bet(client_sock, bet.document, bet.number)
+            bet_count = 0
+            while True:
+                bets, _, finish = utils.decode_bets(client_sock, bet_count)
+                if finish:
+                    utils.acknowledge_bets(client_sock, bet_count)
+                    logging.info(f'action: apuesta_recibida | result: success | cantidad: {bet_count}')
+                    break
+                
+                utils.store_bets(bets)
+                bet_count += len(bets)
+                logging.info(f'action: apuesta_almacenada | result: success | cantidad: {bet_count}')
         except OSError as e:
             logging.error("action: receive_message | result: fail | error: {e}")
         finally:

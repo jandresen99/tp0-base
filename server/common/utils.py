@@ -53,21 +53,40 @@ def load_bets() -> list[Bet]:
 """
 Decodes a bet from a client socket.
 """
-def decode_bet(client_sock):
-    msg_lenght = int.from_bytes(client_sock.recv(4), byteorder='big')
-    msg = client_sock.recv(msg_lenght).decode('utf-8').strip()
+def decode_bets(client_sock, bet_count):
+    msg_lenght = int.from_bytes(client_sock.recv(2), byteorder='big')
+    msg = recv_full(client_sock, msg_lenght).decode('utf-8').strip()
     addr = client_sock.getpeername()
 
-    bet_data = msg.split(',')
-    if len(bet_data) != 6:
-        logging.error(f"action: receive_message | result: fail | ip: {addr[0]} | msg: {msg} | error: Invalid bet data")
-        raise ValueError("Invalid bet data")
+    if msg == "FINISH":
+        return None, addr, True
     
-    bet = Bet(bet_data[0], bet_data[1], bet_data[2], bet_data[3], bet_data[4], bet_data[5])
-    return bet, addr, msg
+    decoded_bets = []
+
+    bets = msg.split(';')
+
+    for bet in bets:
+        bet_data = bet.split(',')
+        if len(bet_data) != 6:
+            logging.error(f"action: apuesta_recibida | result: fail | cantidad: {bet_count} | msg: {msg} | error: Invalid bet data")
+            raise ValueError("Invalid bet data")
+    
+        decoded_bet = Bet(bet_data[0], bet_data[1], bet_data[2], bet_data[3], bet_data[4], bet_data[5])
+        decoded_bets.append(decoded_bet)
+
+    return decoded_bets, addr, False
 
 """
-Acknowledges a bet to a client socket.
+Acknowledges that all the bets have been received to a client socket.
 """
-def acknowledge_bet(client_sock, document, number):
-    client_sock.send("{},{}\n".format(document,number).encode('utf-8'))
+def acknowledge_bets(client_sock, bet_count):
+    client_sock.send("{}\n".format(bet_count).encode('utf-8'))
+
+def recv_full(client_sock, size):
+    data = b""
+    while len(data) < size:
+        packet = client_sock.recv(size - len(data))
+        if not packet:
+            raise ConnectionError("Connection closed unexpectedly")
+        data += packet
+    return data

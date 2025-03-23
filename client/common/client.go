@@ -15,25 +15,26 @@ var log = logging.MustGetLogger("log")
 
 // ClientConfig Configuration used by the client
 type ClientConfig struct {
-	ID            string
-	ServerAddress string
-	LoopAmount    int
-	LoopPeriod    time.Duration
+	ID             string
+	ServerAddress  string
+	LoopAmount     int
+	LoopPeriod     time.Duration
+	BatchMaxAmount int
 }
 
 // Client Entity that encapsulates how
 type Client struct {
 	config ClientConfig
 	conn   net.Conn
-	bet    Bet
+	bets   []Bet
 }
 
 // NewClient Initializes a new client receiving the configuration
 // as a parameter
-func NewClient(config ClientConfig, bet Bet) *Client {
+func NewClient(config ClientConfig, bets []Bet) *Client {
 	client := &Client{
 		config: config,
-		bet:    bet,
+		bets:   bets,
 	}
 	return client
 }
@@ -56,41 +57,55 @@ func (c *Client) createClientSocket() error {
 
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop(sigChan chan os.Signal) {
-	// There is an autoincremental msgID to identify every message sent
-	// Messages if the message amount threshold has not been surpassed
-	select {
-	case <-sigChan:
-		log.Infof("action: shutdown | result: success")
+	// Create the connection the server in every loop iteration. Send an
+	c.createClientSocket()
+
+	totalBets := len(c.bets)
+	betCount := 0
+
+loop:
+	for i := 0; i < totalBets; i += c.config.BatchMaxAmount {
+		end := i + c.config.BatchMaxAmount
+		if end > totalBets {
+			end = totalBets
+		}
+
+		batch := c.bets[i:end]
+		betCount += len(batch)
+
+		err := sendBetBatch(c.conn, batch, betCount)
+		if err != nil {
+			return
+		}
+
+		select {
+		case <-sigChan:
+			log.Infof("action: shutdown | result: success")
+			break loop
+		default:
+		}
+	}
+
+	sendFinishMessage(c.conn)
+
+	msg, err := bufio.NewReader(c.conn).ReadString('\n')
+	if err != nil {
+		log.Errorf("action: receive_message | result: fail | error: %v",
+			c.config.ID,
+			err,
+		)
 		return
-	default:
+	}
 
-		// Create the connection the server in every loop iteration. Send an
-		c.createClientSocket()
+	response_count, _ := strconv.Atoi(strings.TrimSpace(msg))
 
-		err := sendBet(c.conn, c.bet)
-		if err != nil {
-			return
-		}
-
-		msg, err := bufio.NewReader(c.conn).ReadString('\n')
+	if response_count != totalBets {
+		log.Errorf("action: finalizar_envio | result: fail | msg: %v | error: unexpected message",
+			msg,
+		)
+		return
+	} else {
+		log.Infof("action: finalizar_envio | result: success")
 		c.conn.Close()
-		if err != nil {
-			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
-				c.config.ID,
-				err,
-			)
-			return
-		}
-
-		response_data := strings.Split(msg, ",")
-		rsp_doc, _ := strconv.Atoi(strings.TrimSpace(response_data[0]))
-		rsp_num, _ := strconv.Atoi(strings.TrimSpace(response_data[1]))
-		bet_doc, _ := strconv.Atoi(strings.TrimSpace(c.bet.Document))
-		bet_num, _ := strconv.Atoi(strings.TrimSpace(c.bet.Number))
-		if rsp_doc == bet_doc && rsp_num == bet_num {
-			log.Infof("action: apuesta_enviada | result: success | dni: %v | numero: %v", c.bet.Document, c.bet.Number)
-		} else {
-			log.Errorf("action: apuesta_enviada | result: fail | dni: %v | numero: %v", c.bet.Document, c.bet.Number)
-		}
 	}
 }
