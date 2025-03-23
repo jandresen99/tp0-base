@@ -69,9 +69,9 @@ class Server:
                     logging.info(f'action: apuesta_recibida | result: in_progress | cantidad: {bet_count}')
             if message == "RESULTS":
                 agency_id = utils.receive_message(client_sock)
-                logging.info(f'action: sorteo | result: pending | finished_clients: {self.finished_clients} | bet_clients: {self.bet_clients} | agency_id: {agency_id}')
+                #logging.info(f'action: sorteo | result: pending | finished_clients: {self.finished_clients} | bet_clients: {self.bet_clients} | agency_id: {agency_id}')
                 if self.finished_clients == self.bet_clients:
-                    logging.info(f'action: sorteo | result: in_progress | finished_clients: {self.finished_clients} | bet_clients: {self.bet_clients} | agency_id: {agency_id}')
+                    #logging.info(f'action: sorteo | result: in_progress | finished_clients: {self.finished_clients} | bet_clients: {self.bet_clients} | agency_id: {agency_id}')
                     if not self.winners:
                         bets = utils.load_bets()
                         winners = [bet for bet in bets if utils.has_won(bet)]
