@@ -107,5 +107,6 @@ loop:
 	} else {
 		log.Infof("action: finalizar_envio | result: success")
 		c.conn.Close()
+		time.Sleep(100 * time.Millisecond)
 	}
 }
