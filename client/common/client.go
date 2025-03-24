@@ -134,6 +134,7 @@ loop1:
 			if err == nil {
 				log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", len(results))
 				c.conn.Close()
+				time.Sleep(100 * time.Millisecond)
 				return
 			}
 		}
