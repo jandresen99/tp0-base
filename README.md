@@ -233,28 +233,28 @@ make docker-compose-up
 
 #### Explicación
 
-Se realizan modificaciones para que al finalizar el envia de las apuestas de todos los clientes, estos puedan consultar los ganadores.
+Se realizan modificaciones para que al finalizar el envia de las apuestas de todos los `Client`, estos puedan consultar los ganadores.
 
-Cuando el `Server` recibe el mensaje `FINISH` de cada cliente, se habilita la realización del sorteo utilizando las funciones `load_bets` y `has_won`.
+Cuando el `Server` recibe el mensaje `FINISH` de cada `Client`, se habilita la realización del sorteo utilizando las funciones `load_bets` y `has_won`.
 
-El sorteo se realiza una sola vez y los resultados se guardan en una variable del `Server` para que pueda ser consultado por varios clientes sin tener que realizar el proceso del sorteo múltiples veces.
+El sorteo se realiza una sola vez y los resultados se guardan en una variable del `Server` para que pueda ser consultado por varios `Client` sin tener que realizar el proceso del sorteo múltiples veces.
 
 #### Protocolo
 
 Se realizaron las siguientes modificaciones al protocolo para lograr un correcto funcionamiento:
 
 - Se agregan dos mensajes para inicializar procesos. 
-- `BET` lo envia un cliente para indicarle al servidor que va a empezar a recibir las apuestas. 
-- `RESULTS` lo envia un cliente para indicarle al servidor que quiere obtener los resultados del sorteo.
-- Si todos los clientes enviaron el mensaje `FINISH`, al recibir el primer `RESULTS` el server realizara el sorteo y le enviara los documentos de los ganadores de su agencia al cliente con el siguiente formato
+- `BET` lo envia un `Client` para indicarle al `Server` que va a empezar a recibir las apuestas. 
+- `RESULTS` lo envia un `Client` para indicarle al `Server` que quiere obtener los resultados del sorteo, seguido de su ID para que el `Server` sepa que agencia es
+- Si todos los `Client` enviaron el mensaje `FINISH`, al recibir el primer `RESULTS` el `Server` realizara el sorteo y le enviara los documentos de los ganadores de su agencia al `Client` con el siguiente formato
 
 ```
 DOCUMENTO1,DOCUMENTO2,DOCUMENTO3,DOCUMENTO4
 ```
 
-- Si nunguna de las apuestas de la agencia resultó ganadores, el server le enviará el mensaje `NOWINNERS`
+- Si nunguna de las apuestas de la agencia resultó ganadores, el `Server` le enviará el mensaje `NOWINNERS`
 
-- Si el server todavía no recibió el mensaje `FINISH` de todos los clientes, entonces no va a responder ningun mensaje de `RESULTS`. Por lo cual, los clientes deberán reintentar hasta conseguir una respuesta, realizando un sleep que se incrementara en cada iteración.
+- Si el `Server` todavía no recibió el mensaje `FINISH` de todos los `Client`, entonces no va a responder ningun mensaje de `RESULTS`. Por lo cual, los `Client` deberán reintentar hasta conseguir una respuesta, realizando un sleep que se incrementara en cada iteración.
 
 
 #### Ejecución
@@ -277,13 +277,13 @@ make docker-compose-up
 
 #### Explicación
 
-Se modificó el server para que pueda procesar multiples mensajes al mismo tiempo. El protocolo no sufrió ningún cambio.
+Se modificó el `Server` para que pueda procesar multiples mensajes al mismo tiempo. El protocolo no sufrió ningún cambio.
 
 #### Mecanismo de sincronización
 
 Se utilizo la librería `threading` para generar un `thread` por cada connexión.
 
-Para evitar condiciones de carrera se implementaron `locks` para el contador de clientes que enviaron el mensaje `FINISH` y otro para utilizar la función `store_bets`.
+Para evitar condiciones de carrera se implementaron `locks` para el contador de `Client` que enviaron el mensaje `FINISH` y otro para utilizar la función `store_bets`.
 
 #### Ejecución
 
