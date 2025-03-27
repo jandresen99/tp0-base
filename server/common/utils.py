@@ -1,6 +1,7 @@
 import csv
 import datetime
 import time
+import logging
 
 
 """ Bets storage location. """
@@ -49,3 +50,63 @@ def load_bets() -> list[Bet]:
         for row in reader:
             yield Bet(row[0], row[1], row[2], row[3], row[4], row[5])
 
+"""
+Receives a message from a client socket.
+"""
+def receive_message(client_sock):
+    size = int.from_bytes(client_sock.recv(2), byteorder='big')
+
+    data = b""
+    while len(data) < size:
+        packet = client_sock.recv(size - len(data))
+        if not packet:
+            raise ConnectionError("Connection closed unexpectedly")
+        data += packet
+    
+    msg = data.decode('utf-8').strip()
+
+    return msg
+
+"""
+Sends a message to a client socket.
+"""
+def send_message(client_sock, message):
+    client_sock.send("{}\n".format(message).encode('utf-8'))
+
+"""
+Decodes a bet from a client socket.
+"""
+def decode_bets(client_sock, bet_count):
+    msg = receive_message(client_sock)
+
+    if msg == "FINISH":
+        return None, True
+    
+    decoded_bets = []
+
+    bets = msg.split(';')
+
+    for bet in bets:
+        bet_data = bet.split(',')
+        if len(bet_data) != 6:
+            logging.error(f"action: apuesta_recibida | result: fail | cantidad: {bet_count} | msg: {msg} | error: Invalid bet data")
+            raise ValueError("Invalid bet data")
+    
+        decoded_bet = Bet(bet_data[0], bet_data[1], bet_data[2], bet_data[3], bet_data[4], bet_data[5])
+        decoded_bets.append(decoded_bet)
+
+    return decoded_bets, False
+
+"""
+Acknowledges that all the bets have been received to a client socket.
+"""
+def acknowledge_bets(client_sock, bet_count):
+    send_message(client_sock, bet_count)
+
+def send_results(client_sock, winners):
+    if len(winners) == 0:
+        message = "NOWINNERS"
+    else:
+        message = ",".join([f"{winner.document}" for winner in winners])
+
+    send_message(client_sock, message)

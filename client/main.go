@@ -1,9 +1,12 @@
 package main
 
 import (
+	"encoding/csv"
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/op/go-logging"
@@ -37,6 +40,7 @@ func InitConfig() (*viper.Viper, error) {
 	v.BindEnv("loop", "period")
 	v.BindEnv("loop", "amount")
 	v.BindEnv("log", "level")
+	v.BindEnv("batch", "maxAmount")
 
 	// Try to read configuration from config file. If config file
 	// does not exists then ReadInConfig will fail but configuration
@@ -90,6 +94,39 @@ func PrintConfig(v *viper.Viper) {
 	)
 }
 
+func GetAgencyData(agencyId string) ([]common.Bet, error) {
+	file, err := os.Open("agency.csv")
+	if err != nil {
+		log.Errorf("action: read_file | result: fail | error: %v",
+			err,
+		)
+		return nil, err
+	}
+	reader := csv.NewReader(file)
+
+	lines, err := reader.ReadAll()
+	if err != nil {
+		fmt.Println("Error reading file:", err)
+		return nil, err
+	}
+
+	var bets []common.Bet
+	for _, line := range lines {
+		bet := common.Bet{
+			AgencyId:  agencyId,
+			Name:      line[0],
+			LastName:  line[1],
+			Document:  line[2],
+			BirthDate: line[3],
+			Number:    line[4],
+		}
+		bets = append(bets, bet)
+
+	}
+
+	return bets, nil
+}
+
 func main() {
 	v, err := InitConfig()
 	if err != nil {
@@ -100,16 +137,26 @@ func main() {
 		log.Criticalf("%s", err)
 	}
 
+	agencyId := v.GetString("id")
+	bets, err := GetAgencyData(agencyId)
+	if err != nil {
+		log.Criticalf("%s", err)
+	}
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGTERM)
+
 	// Print program config with debugging purposes
 	PrintConfig(v)
 
 	clientConfig := common.ClientConfig{
-		ServerAddress: v.GetString("server.address"),
-		ID:            v.GetString("id"),
-		LoopAmount:    v.GetInt("loop.amount"),
-		LoopPeriod:    v.GetDuration("loop.period"),
+		ServerAddress:  v.GetString("server.address"),
+		ID:             v.GetString("id"),
+		LoopAmount:     v.GetInt("loop.amount"),
+		LoopPeriod:     v.GetDuration("loop.period"),
+		BatchMaxAmount: v.GetInt("batch.maxAmount"),
 	}
 
-	client := common.NewClient(clientConfig)
-	client.StartClientLoop()
+	client := common.NewClient(clientConfig, bets)
+	client.StartClientLoop(sigChan)
 }
