@@ -51,15 +51,36 @@ def load_bets() -> list[Bet]:
             yield Bet(row[0], row[1], row[2], row[3], row[4], row[5])
 
 """
+Receives a message from a client socket.
+"""
+def receive_message(client_sock):
+    size = int.from_bytes(client_sock.recv(2), byteorder='big')
+
+    data = b""
+    while len(data) < size:
+        packet = client_sock.recv(size - len(data))
+        if not packet:
+            raise ConnectionError("Connection closed unexpectedly")
+        data += packet
+    
+    msg = data.decode('utf-8').strip()
+
+    return msg
+
+"""
+Sends a message to a client socket.
+"""
+def send_message(client_sock, message):
+    client_sock.send("{}\n".format(message).encode('utf-8'))
+
+"""
 Decodes a bet from a client socket.
 """
 def decode_bets(client_sock, bet_count):
-    msg_lenght = int.from_bytes(client_sock.recv(2), byteorder='big')
-    msg = recv_full(client_sock, msg_lenght).decode('utf-8').strip()
-    addr = client_sock.getpeername()
+    msg = receive_message(client_sock)
 
     if msg == "FINISH":
-        return None, addr, True
+        return None, True
     
     decoded_bets = []
 
@@ -74,34 +95,18 @@ def decode_bets(client_sock, bet_count):
         decoded_bet = Bet(bet_data[0], bet_data[1], bet_data[2], bet_data[3], bet_data[4], bet_data[5])
         decoded_bets.append(decoded_bet)
 
-    return decoded_bets, addr, False
+    return decoded_bets, False
 
 """
 Acknowledges that all the bets have been received to a client socket.
 """
 def acknowledge_bets(client_sock, bet_count):
-    client_sock.send("{}\n".format(bet_count).encode('utf-8'))
-
-def recv_full(client_sock, size):
-    data = b""
-    while len(data) < size:
-        packet = client_sock.recv(size - len(data))
-        if not packet:
-            raise ConnectionError("Connection closed unexpectedly")
-        data += packet
-    return data
-
-def receive_message(client_sock):
-    msg_lenght = int.from_bytes(client_sock.recv(2), byteorder='big')
-    msg = client_sock.recv(msg_lenght).decode('utf-8').strip()
-    #addr = client_sock.getpeername()
-    #logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
-
-    return msg
+    send_message(client_sock, bet_count)
 
 def send_results(client_sock, winners):
     if len(winners) == 0:
-        client_sock.send("NOWINNERS\n".encode('utf-8'))
-        return
-    message = ",".join([f"{winner.document}" for winner in winners])
-    client_sock.send("{}\n".format(message).encode('utf-8'))
+        message = "NOWINNERS"
+    else:
+        message = ",".join([f"{winner.document}" for winner in winners])
+
+    send_message(client_sock, message)

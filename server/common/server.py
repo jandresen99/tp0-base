@@ -48,21 +48,16 @@ class Server:
             self._server_socket.close()
         self.__wait_for_threads()
         logging.info("action: shutdown | result: success")
+    
+
 
     def __handle_client_connection(self, client_sock):
-        """
-        Read message from a specific client socket and closes the socket
-
-        If a problem arises in the communication with the client, the
-        client socket will also be closed
-        """
         try:
             message = utils.receive_message(client_sock)
             if message == "BET":
                 bet_count = 0
-                #logging.info(f"action: apuesta_recibida | result: in_progress | cantidad: {bet_count}")
                 while True:
-                    bets, _, finish = utils.decode_bets(client_sock, bet_count)
+                    bets, finish = utils.decode_bets(client_sock, bet_count)
                     if finish:
                         utils.acknowledge_bets(client_sock, bet_count)
                         logging.info(f'action: apuesta_recibida | result: success | cantidad: {bet_count}')
@@ -73,13 +68,10 @@ class Server:
                     with self.lock2:
                         utils.store_bets(bets)
                         bet_count += len(bets)
-                    #logging.info(f'action: apuesta_recibida | result: in_progress | cantidad: {bet_count}')
             if message == "RESULTS":
                 agency_id = utils.receive_message(client_sock)
-                #logging.info(f'action: sorteo | result: pending | finished_clients: {self.finished_clients} | clients: {self.clients} | agency_id: {agency_id}')
                 with self.lock1:
                     if int(self.finished_clients) == int(self.clients):
-                        #logging.info(f'action: sorteo | result: in_progress | finished_clients: {self.finished_clients} | clients: {self.clients} | agency_id: {agency_id}')
                         if not self.winners:
                             bets = utils.load_bets()
                             winners = [bet for bet in bets if utils.has_won(bet)]
@@ -95,13 +87,6 @@ class Server:
             client_sock.close()
 
     def __accept_new_connection(self):
-        """
-        Accept new connections
-
-        Function blocks until a connection to a client is made.
-        Then connection created is printed and returned
-        """
-
         # Connection arrived
         logging.info('action: accept_connections | result: in_progress')
         c, addr = self._server_socket.accept()
