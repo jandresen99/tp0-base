@@ -1,5 +1,9 @@
 # TP0: Docker + Comunicaciones + Concurrencia
 
+Alumno: Joaquin Andresen
+
+Padrón: 102707
+
 ## Parte 1
 
 ### Ejercicio 1
