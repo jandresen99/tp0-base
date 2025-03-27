@@ -18,6 +18,41 @@ type Bet struct {
 	Number    string
 }
 
+func sendMessage(conn net.Conn, message string) error {
+	messageBytes := []byte(message)
+	messageLenght := len(message)
+	if messageLenght > 8192 {
+		log.Error("action: send_message | result: fail | error: message exceeds 8kb")
+		return errors.New("message exceeds 8kb")
+	}
+
+	messageSize := uint16(messageLenght)
+
+	sizeBuffer := make([]byte, 2)
+	binary.BigEndian.PutUint16(sizeBuffer, messageSize)
+
+	_, err := conn.Write(sizeBuffer)
+	if err != nil {
+		log.Errorf("action: send_message | result: fail | error: %v", err)
+		return err
+	}
+
+	_, err = conn.Write(messageBytes)
+	if err != nil {
+		log.Errorf("action: send_message | result: fail | error: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+func receiveMessage(conn net.Conn) (string, error) {
+	msg, err := bufio.NewReader(conn).ReadString('\n')
+	msg = strings.TrimSpace(msg)
+
+	return msg, err
+}
+
 func sendBetBatch(conn net.Conn, batch []Bet, betCount int) error {
 	bets_str := make([]string, 0, len(batch))
 
@@ -35,126 +70,34 @@ func sendBetBatch(conn net.Conn, batch []Bet, betCount int) error {
 	}
 
 	message := strings.Join(bets_str, ";")
-	messageLenght := len(message)
-	if messageLenght > 8192 {
-		return errors.New("message exceeds 8kb")
-	}
 
-	messageBytes := []byte(message)
-	messageSize := uint16(len(messageBytes))
-
-	sizeBuffer := make([]byte, 2)
-	binary.BigEndian.PutUint16(sizeBuffer, messageSize)
-
-	_, err := conn.Write(sizeBuffer)
-	if err != nil {
-		log.Errorf("action: apuesta_enviada | result: fail | cantidad: %v | error: %v", betCount, err)
-		return err
-	}
-
-	_, err = conn.Write(messageBytes)
-	if err != nil {
-		log.Errorf("action: apuesta_enviada | result: fail | cantidad: %v | error: %v", betCount, err)
-		return err
-	}
-
-	//log.Infof("action: apuesta_enviada | result: in_progress | cantidad: %v", betCount)
-
-	return nil
+	return sendMessage(conn, message)
 }
 
 func sendFinishMessage(conn net.Conn) error {
-	message := "FINISH"
-	messageBytes := []byte(message)
-	messageSize := uint16(len(messageBytes))
-
-	sizeBuffer := make([]byte, 2)
-	binary.BigEndian.PutUint16(sizeBuffer, messageSize)
-
-	_, err := conn.Write(sizeBuffer)
-	if err != nil {
-		log.Errorf("action: finalizar_envio | result: fail | error: %v", err)
-		return err
-	}
-
-	_, err = conn.Write(messageBytes)
-	if err != nil {
-		log.Errorf("action: finalizar_envio | result: fail | error: %v", err)
-		return err
-	}
-
-	return nil
+	return sendMessage(conn, "FINISH")
 }
 
 func sendStartBets(conn net.Conn) error {
-	message := "BET"
-	messageBytes := []byte(message)
-	messageSize := uint16(len(messageBytes))
-
-	sizeBuffer := make([]byte, 2)
-	binary.BigEndian.PutUint16(sizeBuffer, messageSize)
-
-	_, err := conn.Write(sizeBuffer)
-	if err != nil {
-		log.Errorf("action: comenzar_envio | result: fail | error: %v", err)
-		return err
-	}
-
-	_, err = conn.Write(messageBytes)
-	if err != nil {
-		log.Errorf("action: comenzar_envio | result: fail | error: %v", err)
-		return err
-	}
-
-	log.Infof("action: comenzar_envio | result: success")
-
-	return nil
+	return sendMessage(conn, "BET")
 }
 
 func sendAskForResults(conn net.Conn, agencyId string) ([]string, error) {
 	message1 := "RESULTS"
-	messageBytes1 := []byte(message1)
-	messageSize1 := uint16(len(messageBytes1))
-
 	message2 := agencyId
-	messageBytes2 := []byte(message2)
-	messageSize2 := uint16(len(messageBytes2))
 
-	sizeBuffer1 := make([]byte, 2)
-	binary.BigEndian.PutUint16(sizeBuffer1, messageSize1)
-
-	sizeBuffer2 := make([]byte, 2)
-	binary.BigEndian.PutUint16(sizeBuffer2, messageSize2)
-
-	_, err := conn.Write(sizeBuffer1)
+	err := sendMessage(conn, message1)
 	if err != nil {
-		log.Errorf("action: consulta_ganadores | result: fail | error: %v", err)
 		return nil, err
 	}
 
-	_, err = conn.Write(messageBytes1)
+	err = sendMessage(conn, message2)
 	if err != nil {
-		log.Errorf("action: consulta_ganadores | result: fail | error: %v", err)
 		return nil, err
 	}
 
-	_, err = conn.Write(sizeBuffer2)
+	msg, err := receiveMessage(conn)
 	if err != nil {
-		log.Errorf("action: consulta_ganadores | result: fail | error: %v", err)
-		return nil, err
-	}
-
-	_, err = conn.Write(messageBytes2)
-	if err != nil {
-		log.Errorf("action: consulta_ganadores | result: fail | error: %v", err)
-		return nil, err
-	}
-
-	msg, err := bufio.NewReader(conn).ReadString('\n')
-	msg = strings.TrimSpace(msg)
-
-	if err != nil {
-		//log.Errorf("action: consulta_ganadores | result: fail | error: %v", err)
 		return nil, err
 	}
 

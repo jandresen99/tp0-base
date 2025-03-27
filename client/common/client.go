@@ -1,7 +1,6 @@
 package common
 
 import (
-	"bufio"
 	"net"
 	"os"
 	"strconv"
@@ -63,6 +62,7 @@ func (c *Client) StartClientLoop(sigChan chan os.Signal) {
 	totalBets := len(c.bets)
 	betCount := 0
 
+	log.Infof("action: comenzar_envio | result: in_progress")
 	err := sendStartBets(c.conn)
 	if err != nil {
 		log.Errorf("action: comenzar_envio | result: fail | error: %v",
@@ -71,6 +71,7 @@ func (c *Client) StartClientLoop(sigChan chan os.Signal) {
 		)
 		return
 	}
+	log.Infof("action: comenzar_envio | result: success")
 
 loop1:
 	for i := 0; i < totalBets; i += c.config.BatchMaxAmount {
@@ -96,12 +97,20 @@ loop1:
 	}
 
 	log.Infof("action: apuesta_enviada | result: success | cantidad: %v", betCount)
+	log.Infof("action: finalizar_envio | result: in_progress")
 
-	sendFinishMessage(c.conn)
-
-	msg, err := bufio.NewReader(c.conn).ReadString('\n')
+	err = sendFinishMessage(c.conn)
 	if err != nil {
-		log.Errorf("action: receive_message | result: fail | error: %v",
+		log.Errorf("action: finalizar_envio | result: fail | error: %v",
+			c.config.ID,
+			err,
+		)
+		return
+	}
+
+	msg, err := receiveMessage(c.conn)
+	if err != nil {
+		log.Errorf("action: finalizar_envio | result: fail | error: %v",
 			c.config.ID,
 			err,
 		)
@@ -111,7 +120,7 @@ loop1:
 	response_count, _ := strconv.Atoi(strings.TrimSpace(msg))
 
 	if response_count != totalBets {
-		log.Errorf("action: finalizar_envio | result: fail | msg: %v | error: unexpected message",
+		log.Errorf("action: finalizar_envio | result: fail | msg: %v | error: response does not match",
 			msg,
 		)
 		return
@@ -120,14 +129,14 @@ loop1:
 	log.Infof("action: finalizar_envio | result: success")
 	c.conn.Close()
 
-	log.Infof("action: consulta_ganadores | result: in_progress")
-
+	sleepMultiplier := 0
 	for {
 		select {
 		case <-sigChan:
 			log.Infof("action: shutdown | result: success")
 			return
 		default:
+			log.Infof("action: consulta_ganadores | result: in_progress | attempt: %v", sleepMultiplier)
 			c.createClientSocket()
 
 			results, err := sendAskForResults(c.conn, c.config.ID)
@@ -136,6 +145,10 @@ loop1:
 				c.conn.Close()
 				time.Sleep(100 * time.Millisecond)
 				return
+			} else {
+				c.conn.Close()
+				sleepMultiplier++
+				time.Sleep(time.Duration(sleepMultiplier*1000) * time.Millisecond)
 			}
 		}
 	}
