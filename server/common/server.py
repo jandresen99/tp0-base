@@ -77,7 +77,7 @@ class Server:
             if message == "RESULTS":
                 agency_id = utils.receive_message(client_sock)
                 #logging.info(f'action: sorteo | result: pending | finished_clients: {self.finished_clients} | clients: {self.clients} | agency_id: {agency_id}')
-                with self.lock:
+                with self.lock1:
                     if int(self.finished_clients) == int(self.clients):
                         #logging.info(f'action: sorteo | result: in_progress | finished_clients: {self.finished_clients} | clients: {self.clients} | agency_id: {agency_id}')
                         if not self.winners:
