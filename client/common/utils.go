@@ -49,6 +49,10 @@ func sendMessage(conn net.Conn, message string) error {
 func receiveMessage(conn net.Conn) (string, error) {
 	msg, err := bufio.NewReader(conn).ReadString('\n')
 	msg = strings.TrimSpace(msg)
+	if err == nil && msg == "ERROR" {
+		log.Error("action: receive_message | result: fail | error: server failed")
+		return msg, errors.New("server failed")
+	}
 
 	return msg, err
 }

@@ -48,8 +48,6 @@ class Server:
             self._server_socket.close()
         self.__wait_for_threads()
         logging.info("action: shutdown | result: success")
-    
-
 
     def __handle_client_connection(self, client_sock):
         try:
@@ -83,6 +81,7 @@ class Server:
                         utils.send_results(client_sock, agency_winners)
         except OSError as e:
             logging.error("action: receive_message | result: fail | error: {e}")
+            utils.send_message(client_sock, "ERROR")
         finally:
             client_sock.close()
 
