@@ -11,6 +11,7 @@ class Server:
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
         self.running = False
+        self.client_sockets = []
 
     def run(self):
         """
@@ -28,6 +29,7 @@ class Server:
             try:
                 client_sock = self.__accept_new_connection()
                 if client_sock:
+                    self.client_sockets.append(client_sock)
                     self.__handle_client_connection(client_sock)
             except:
                 if not self.running:
@@ -38,15 +40,11 @@ class Server:
         logging.info(f'action: shutdown | result: in_progress')
         if self._server_socket:
             self._server_socket.close()
-            logging.info(f'action: shutdown | result: success')
+        for client_socket in self.client_sockets:
+            client_socket.close()
+        logging.info(f'action: shutdown | result: success')
 
     def __handle_client_connection(self, client_sock):
-        """
-        Read message from a specific client socket and closes the socket
-
-        If a problem arises in the communication with the client, the
-        client socket will also be closed
-        """
         try:
             bet, addr, msg = utils.decode_bet(client_sock)
             logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
@@ -57,6 +55,7 @@ class Server:
             logging.error("action: receive_message | result: fail | error: {e}")
         finally:
             client_sock.close()
+            self.client_sockets.remove(client_sock)
 
     def __accept_new_connection(self):
         """

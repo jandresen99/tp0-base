@@ -1,7 +1,6 @@
 package common
 
 import (
-	"bufio"
 	"net"
 	"os"
 	"strconv"
@@ -72,15 +71,15 @@ func (c *Client) StartClientLoop(sigChan chan os.Signal) {
 			return
 		}
 
-		msg, err := bufio.NewReader(c.conn).ReadString('\n')
-		c.conn.Close()
+		msg, err := receiveMessage(c.conn)
 		if err != nil {
-			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
+			log.Errorf("action: finalizar_envio | result: fail | error: %v",
 				c.config.ID,
 				err,
 			)
 			return
 		}
+		c.conn.Close()
 
 		response_data := strings.Split(msg, ",")
 		rsp_doc, _ := strconv.Atoi(strings.TrimSpace(response_data[0]))

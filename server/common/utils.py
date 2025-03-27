@@ -51,11 +51,27 @@ def load_bets() -> list[Bet]:
             yield Bet(row[0], row[1], row[2], row[3], row[4], row[5])
 
 """
+Receives a message from a client socket.
+"""
+def receive_message(client_sock):
+    size = int.from_bytes(client_sock.recv(2), byteorder='big')
+
+    data = b""
+    while len(data) < size:
+        packet = client_sock.recv(size - len(data))
+        if not packet:
+            raise ConnectionError("Connection closed unexpectedly")
+        data += packet
+    
+    msg = data.decode('utf-8').strip()
+
+    return msg
+
+"""
 Decodes a bet from a client socket.
 """
 def decode_bet(client_sock):
-    msg_lenght = int.from_bytes(client_sock.recv(4), byteorder='big')
-    msg = client_sock.recv(msg_lenght).decode('utf-8').strip()
+    msg = receive_message(client_sock)
     addr = client_sock.getpeername()
 
     bet_data = msg.split(',')
