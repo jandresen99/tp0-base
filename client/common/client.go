@@ -1,7 +1,6 @@
 package common
 
 import (
-	"bufio"
 	"net"
 	"os"
 	"strconv"
@@ -86,11 +85,21 @@ loop:
 		}
 	}
 
-	sendFinishMessage(c.conn)
+	log.Infof("action: apuesta_enviada | result: success | cantidad: %v", betCount)
+	log.Infof("action: finalizar_envio | result: in_progress")
 
-	msg, err := bufio.NewReader(c.conn).ReadString('\n')
+	err := sendFinishMessage(c.conn)
 	if err != nil {
-		log.Errorf("action: receive_message | result: fail | error: %v",
+		log.Errorf("action: finalizar_envio | result: fail | error: %v",
+			c.config.ID,
+			err,
+		)
+		return
+	}
+
+	msg, err := receiveMessage(c.conn)
+	if err != nil {
+		log.Errorf("action: finalizar_envio | result: fail | error: %v",
 			c.config.ID,
 			err,
 		)
@@ -98,7 +107,6 @@ loop:
 	}
 
 	response_count, _ := strconv.Atoi(strings.TrimSpace(msg))
-
 	if response_count != totalBets {
 		log.Errorf("action: finalizar_envio | result: fail | msg: %v | error: unexpected message",
 			msg,
