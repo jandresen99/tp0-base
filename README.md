@@ -277,7 +277,7 @@ make docker-compose-up
 
 #### Explicación
 
-Se modificó el `Server` para que pueda procesar multiples mensajes al mismo tiempo. El protocolo no sufrió ningún cambio.
+Se modificó el `Server` para que pueda procesar multiples mensajes al mismo tiempo. Se agrego un mensaje extra llamado `ERROR` para que el `Server` le pueda avisar al `Client` que ocurrio un error internamente.
 
 #### Mecanismo de sincronización
 
