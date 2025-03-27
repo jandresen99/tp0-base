@@ -15,7 +15,8 @@ class Server:
         self.clients = clients
         self.finished_clients = 0
         self.winners = []
-        self.lock = threading.Lock()
+        self.lock1 = threading.Lock()
+        self.lock2 = threading.Lock()
         self.threads = []
 
     def run(self):
@@ -65,12 +66,13 @@ class Server:
                     if finish:
                         utils.acknowledge_bets(client_sock, bet_count)
                         logging.info(f'action: apuesta_recibida | result: success | cantidad: {bet_count}')
-                        with self.lock:
+                        with self.lock1:
                             self.finished_clients += 1
                         break
 
-                    utils.store_bets(bets)
-                    bet_count += len(bets)
+                    with self.lock2:
+                        utils.store_bets(bets)
+                        bet_count += len(bets)
                     #logging.info(f'action: apuesta_recibida | result: in_progress | cantidad: {bet_count}')
             if message == "RESULTS":
                 agency_id = utils.receive_message(client_sock)
