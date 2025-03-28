@@ -31,16 +31,24 @@ func sendMessage(conn net.Conn, message string) error {
 	sizeBuffer := make([]byte, 2)
 	binary.BigEndian.PutUint16(sizeBuffer, messageSize)
 
-	_, err := conn.Write(sizeBuffer)
+	n, err := conn.Write(sizeBuffer)
 	if err != nil {
 		log.Errorf("action: send_message | result: fail | error: %v", err)
 		return err
 	}
+	if n != len(sizeBuffer) {
+		log.Error("action: send_message | result: fail | error: incomplete write")
+		return errors.New("incomplete write")
+	}
 
-	_, err = conn.Write(messageBytes)
-	if err != nil {
-		log.Errorf("action: send_message | result: fail | error: %v", err)
-		return err
+	unsentData := messageBytes
+	for len(unsentData) > 0 {
+		n, err = conn.Write(unsentData)
+		if err != nil {
+			log.Errorf("action: send_message | result: fail | error: %v", err)
+			return err
+		}
+		unsentData = unsentData[n:]
 	}
 
 	return nil
