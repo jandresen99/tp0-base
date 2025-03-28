@@ -71,7 +71,12 @@ def receive_message(client_sock):
 Sends a message to a client socket.
 """
 def send_message(client_sock, message):
-    client_sock.send("{}\n".format(message).encode('utf-8'))
+    message_bytes = "{}\n".format(message).encode('utf-8')
+    unsent_data = message_bytes
+
+    while len(unsent_data) > 0:
+        n = client_sock.send(unsent_data)
+        unsent_data = unsent_data[n:]
 
 """
 Decodes a bet from a client socket.
