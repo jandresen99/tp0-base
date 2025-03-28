@@ -94,37 +94,15 @@ func PrintConfig(v *viper.Viper) {
 	)
 }
 
-func GetAgencyData(agencyId string) ([]common.Bet, error) {
+func getFileReader() (*os.File, *csv.Reader, error) {
 	file, err := os.Open("agency.csv")
 	if err != nil {
-		log.Errorf("action: read_file | result: fail | error: %v",
-			err,
-		)
-		return nil, err
+		log.Errorf("action: open_file | result: fail | error: %v", err)
+		return nil, nil, err
 	}
+
 	reader := csv.NewReader(file)
-
-	lines, err := reader.ReadAll()
-	if err != nil {
-		fmt.Println("Error reading file:", err)
-		return nil, err
-	}
-
-	var bets []common.Bet
-	for _, line := range lines {
-		bet := common.Bet{
-			AgencyId:  agencyId,
-			Name:      line[0],
-			LastName:  line[1],
-			Document:  line[2],
-			BirthDate: line[3],
-			Number:    line[4],
-		}
-		bets = append(bets, bet)
-
-	}
-
-	return bets, nil
+	return file, reader, nil
 }
 
 func main() {
@@ -134,12 +112,6 @@ func main() {
 	}
 
 	if err := InitLogger(v.GetString("log.level")); err != nil {
-		log.Criticalf("%s", err)
-	}
-
-	agencyId := v.GetString("id")
-	bets, err := GetAgencyData(agencyId)
-	if err != nil {
 		log.Criticalf("%s", err)
 	}
 
@@ -157,6 +129,11 @@ func main() {
 		BatchMaxAmount: v.GetInt("batch.maxAmount"),
 	}
 
-	client := common.NewClient(clientConfig, bets)
+	file, reader, err := getFileReader()
+	if err != nil {
+		log.Criticalf("%s", err)
+	}
+
+	client := common.NewClient(clientConfig, file, reader)
 	client.StartClientLoop(sigChan)
 }

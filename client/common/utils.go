@@ -3,8 +3,10 @@ package common
 import (
 	"bufio"
 	"encoding/binary"
+	"encoding/csv"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"strings"
 )
@@ -65,7 +67,7 @@ func receiveMessage(conn net.Conn) (string, error) {
 	return msg, err
 }
 
-func sendBetBatch(conn net.Conn, batch []Bet, betCount int) error {
+func sendBetBatch(conn net.Conn, batch []Bet) error {
 	bets_str := make([]string, 0, len(batch))
 
 	for _, bet := range batch {
@@ -118,4 +120,29 @@ func sendAskForResults(conn net.Conn, agencyId string) ([]string, error) {
 	}
 
 	return strings.Split(msg, ","), nil
+}
+
+func getAgencyData(reader *csv.Reader, agencyId string, batchAmount int) ([]Bet, error) {
+	var bets []Bet
+	for i := 0; i < batchAmount; i++ {
+		line, err := reader.Read()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			log.Errorf("action: read_line | result: fail | error: %v", err)
+			return nil, err
+		}
+
+		bet := Bet{
+			AgencyId:  agencyId,
+			Name:      line[0],
+			LastName:  line[1],
+			Document:  line[2],
+			BirthDate: line[3],
+			Number:    line[4],
+		}
+		bets = append(bets, bet)
+	}
+
+	return bets, nil
 }

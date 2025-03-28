@@ -1,6 +1,7 @@
 package common
 
 import (
+	"encoding/csv"
 	"net"
 	"os"
 	"strconv"
@@ -25,15 +26,17 @@ type ClientConfig struct {
 type Client struct {
 	config ClientConfig
 	conn   net.Conn
-	bets   []Bet
+	file   *os.File
+	reader *csv.Reader
 }
 
 // NewClient Initializes a new client receiving the configuration
 // as a parameter
-func NewClient(config ClientConfig, bets []Bet) *Client {
+func NewClient(config ClientConfig, file *os.File, reader *csv.Reader) *Client {
 	client := &Client{
 		config: config,
-		bets:   bets,
+		file:   file,
+		reader: reader,
 	}
 	return client
 }
@@ -59,7 +62,6 @@ func (c *Client) StartClientLoop(sigChan chan os.Signal) {
 	// Create the connection the server in every loop iteration. Send an
 	c.createClientSocket()
 
-	totalBets := len(c.bets)
 	betCount := 0
 
 	log.Infof("action: comenzar_envio | result: in_progress")
@@ -73,28 +75,34 @@ func (c *Client) StartClientLoop(sigChan chan os.Signal) {
 	}
 	log.Infof("action: comenzar_envio | result: success")
 
-loop1:
-	for i := 0; i < totalBets; i += c.config.BatchMaxAmount {
-		end := i + c.config.BatchMaxAmount
-		if end > totalBets {
-			end = totalBets
-		}
-
-		batch := c.bets[i:end]
-		betCount += len(batch)
-
-		err := sendBetBatch(c.conn, batch, betCount)
+	for {
+		batch, err := getAgencyData(c.reader, c.config.ID, c.config.BatchMaxAmount)
 		if err != nil {
 			return
 		}
 
+		if len(batch) == 0 {
+			break
+		}
+
+		err = sendBetBatch(c.conn, batch)
+		if err != nil {
+			return
+		}
+
+		betCount += len(batch)
+
 		select {
 		case <-sigChan:
 			log.Infof("action: shutdown | result: success")
-			break loop1
+			c.conn.Close()
+			c.file.Close()
+			return
 		default:
 		}
 	}
+
+	c.file.Close()
 
 	log.Infof("action: apuesta_enviada | result: success | cantidad: %v", betCount)
 	log.Infof("action: finalizar_envio | result: in_progress")
@@ -117,9 +125,9 @@ loop1:
 		return
 	}
 
-	response_count, _ := strconv.Atoi(strings.TrimSpace(msg))
+	responseCount, _ := strconv.Atoi(strings.TrimSpace(msg))
 
-	if response_count != totalBets {
+	if responseCount != betCount {
 		log.Errorf("action: finalizar_envio | result: fail | msg: %v | error: response does not match",
 			msg,
 		)
